@@ -1,0 +1,48 @@
+version: '2.4'
+
+services:
+  app:
+    container_name: task-manager.app
+    build:
+      context: ./task-manager/.
+      dockerfile: Dockerfile
+    image: task-manager-app:dev
+    command: bin/composer.sh
+    working_dir: /app
+    volumes:
+      - ./task-manager:/app
+    ports:
+      - '3001:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  db:
+    container_name: task-manager.db
+    image: postgres:13
+    environment:
+      POSTGRES_USER: task-manager
+      POSTGRES_PASSWORD: task-manager
+    volumes:
+      - ./task-manager/.db:/var/lib/postgresql/data
+    healthcheck:
+      test: 'psql -U task-manager -c "select from pg_catalog.pg_namespace;"'
+      start_period: 20s
+      interval: 1s
+      timeout: 3s
+    ports:
+      - '5432:5432'
+
+  rabbitmq:
+    container_name: popug-jira.rabbitmq
+    image: rabbitmq:3.8.2-management-alpine
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    healthcheck:
+      test: 'rabbitmqctl status'
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
